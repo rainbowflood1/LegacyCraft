@@ -185,10 +185,6 @@ int take_damage(int fall_time) {
     return fall_time/20 * 2.0;
 }
 
-bool send_chat_message(const char* text) {
-    
-}
-
 int main(int argc, char *argv[]) {
     const int screenWidth = 1920;
     const int screenHeight = 1080;
@@ -400,6 +396,7 @@ int main(int argc, char *argv[]) {
     bool used_hotbar = false;
     int footstep_stopwatch = 0;
     int hotbar_item_slot = 1;
+    int messages = 0;
 
     
     // You died screen
@@ -648,6 +645,11 @@ int main(int argc, char *argv[]) {
 
             EndMode3D();
 
+
+            // Chat
+            
+
+
             // Gamma
             
             DrawRectangle(0, 0, screenWidth, screenHeight, Fade(WHITE, 0.50));
@@ -746,6 +748,10 @@ int main(int argc, char *argv[]) {
                 value = lerp(value , 0.75, tick);
                 camera.fovy = lerp(camera.fovy, 10, 0.01);
                 DrawRectangle(0, 0, screenWidth, screenHeight, Fade({255, 0, 0, 255}, value));
+
+                // Chat
+                DrawRectangle(0, screenHeight * 0.6, screenWidth / 2, 50, Fade(BLACK, 0.50));
+                DrawTextEx(minfont, "<player> hit the ground too hard", (Vector2){ 0, (screenHeight * 0.6) + 10 }, 25.0, 1, RAYWHITE);
                 DrawTextEx(minfont, "You died!", (Vector2){(screenWidth/2)-minfont.baseSize*2, screenHeight/3}, (float)minfont.baseSize*2, 2, RAYWHITE);
                 
             }
