@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "raylib.h"
 #include <string>
 #include <cmath>
@@ -10,6 +11,50 @@
 #include <map>
 #include <iostream>
 #include <string>
+#include <cstdio>
+#include <array>
+#include "Libraries/nlohmann/json.hpp"
+
+
+int port = 3000;
+
+void Send(std::string username) {
+    std::string command = ".\\curl\\bin\\curl.exe ";
+    command = command + "http://localhost:3000/addplayer/" + username;
+    system(command.c_str());
+}
+
+void Set_Player_position_server(std::string username, float x, float y, float z) {
+    std::string command = ".\\curl\\bin\\curl.exe ";
+    command = command + "http://localhost:3000/setposition/" + username + "/";
+    command = command + std::to_string(x) + "/";
+    command = command + std::to_string(y) + "/";
+    command = command + std::to_string(z);
+    system(command.c_str());
+    std::cout << command;
+}
+
+std::string Receive() {
+    const char* command = ".\\curl\\bin\\curl.exe localhost:3000/getdata";
+    std::array<char, 128> buffer;
+    std::string result;
+
+    // Open the command for reading
+    FILE* pipe = popen(command, "r");
+    if (!pipe) {
+        std::cerr << "popen() failed!" << std::endl;
+    }
+
+    // Read the output a line at a time - output it
+    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
+        result += buffer.data();
+    }
+
+    // Close the pipe
+    auto returnCode = pclose(pipe);
+
+    return result;
+}
 
 
 //------------------------------------------------------------------------------------
@@ -174,11 +219,6 @@ double fractalNoise(double x, double y, int gridSize, int octaves, double persis
     return total / maxNoiseValue;
 }
 
-
-
-
-
-
 float TPS = 20;
 
 int take_damage(int fall_time) {
@@ -186,8 +226,9 @@ int take_damage(int fall_time) {
 }
 
 int main(int argc, char *argv[]) {
-    const int screenWidth = 1920;
-    const int screenHeight = 1080;
+    Send(argv[3]);
+    const int screenWidth = 1920/2;
+    const int screenHeight = 1080-1;
     int world_size = 862;
 
     
@@ -340,12 +381,19 @@ int main(int argc, char *argv[]) {
     UnloadImage(craftingUI_backround);
     
     Vector3 death_postition = (Vector3) {0, 0, 0};
+    
+    
+    
+    
+    
+    
+    Vector3 player2 = (Vector3){0, 0, 0};
 
 
     // System
     int time_played = 0;
     bool death_sound = true;
-
+    using json = nlohmann::json;
     // Command World Arguments
     int seed_temp = SEED+rand()*rand();
     if (argv[1] == NULL || (int(*argv[1]) - 48) == 0) {
@@ -404,6 +452,8 @@ int main(int argc, char *argv[]) {
     int value_max = 0.25;
     float value = 0;
     
+    std::vector<Vector3> player_position{};
+    
     // Item selector adjustment
     int item_selector_width = item_selector.width - 10;
     
@@ -426,6 +476,8 @@ int main(int argc, char *argv[]) {
     //  Instructions in the top, right bar
     const char* desc = "";
     
+    using namespace nlohmann::literals;
+    
     
     while (!WindowShouldClose())
     {
@@ -441,7 +493,7 @@ int main(int argc, char *argv[]) {
         }
         // Update
         camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-        UpdateMusicStream(song[song_chosen]);
+        UpdateMusicStream(song[song_chosen]); 
         time_played++;
         stopwatch++;
         footstep_stopwatch++;
@@ -460,11 +512,7 @@ int main(int argc, char *argv[]) {
             bar_transparent = lerp(bar_transparent, 0.25, 0.01);
         }
         
-        // Play footsteps on the amount of frames
-        if (footstep_stopwatch >= 20) {
-            footstep_stopwatch = 0;
-        //    PlaySound(grass1);
-        }
+
         
         // Collision system (uses world hightmap as data)
         if (camera.position.y <= std::round((perlin2d(camera.position.x, camera.position.z, freq, depth)*height))+2.0f and swim == false and died == false) {
@@ -568,7 +616,25 @@ int main(int argc, char *argv[]) {
 
 
             BeginMode3D(camera);
-                
+            
+                for (auto it : json::parse(Receive()))
+                {
+                    std::cout << "value: " << it << '\n';
+                }
+            
+            
+                // Play footsteps on the amount of frames
+                DrawCube(player2, 1, 1, 1, RED);
+                if (footstep_stopwatch >= 20) {
+                    json player2_json = json::parse(Receive())["logic1"];
+                    player2.x = player2_json["x"];
+                    player2.y = player2_json["y"];
+                    player2.z = player2_json["z"];
+                    footstep_stopwatch = 0;
+                    Set_Player_position_server(argv[3], camera.position.x, camera.position.y, camera.position.z);
+                    std::cout << Receive();
+                //    PlaySound(grass1);
+                }
                 
                 
                 // Terrain Generation
